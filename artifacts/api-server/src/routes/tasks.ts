@@ -8,9 +8,9 @@ const router = Router();
 router.get("/tasks", requireAuth, async (req, res) => {
   try {
     const { leadId, status } = req.query;
-    const conditions: any[] = [];
-    if (leadId) conditions.push(eq(tasksTable.leadId, parseInt(leadId as string)));
-    if (status) conditions.push(eq(tasksTable.status, status as string));
+    const conditions: ReturnType<typeof eq>[] = [];
+    if (leadId) conditions.push(eq(tasksTable.leadId, parseInt(String(leadId))));
+    if (status) conditions.push(eq(tasksTable.status, String(status)));
     const where = conditions.length > 0 ? and(...conditions) : undefined;
     const data = await db.select().from(tasksTable).where(where);
     res.json(data);
@@ -32,7 +32,7 @@ router.post("/tasks", requireAuth, async (req, res) => {
 
 router.patch("/tasks/:id", requireAuth, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params["id"]));
     const body = { ...req.body, updatedAt: new Date() };
     if (body.dueDate) body.dueDate = new Date(body.dueDate);
     const [updated] = await db.update(tasksTable).set(body).where(eq(tasksTable.id, id)).returning();
@@ -44,7 +44,7 @@ router.patch("/tasks/:id", requireAuth, async (req, res) => {
 
 router.delete("/tasks/:id", requireAuth, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params["id"]));
     await db.delete(tasksTable).where(eq(tasksTable.id, id));
     res.json({ ok: true });
   } catch (err) {

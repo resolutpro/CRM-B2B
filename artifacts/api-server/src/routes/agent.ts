@@ -55,10 +55,11 @@ async function upsertLead(leadData: any) {
     if (PROTECTED_STATUSES.includes(existing.crmStatus || "")) {
       return { lead: existing, action: "skipped" };
     }
-    const updates: any = { updatedAt: new Date() };
-    for (const [k, v] of Object.entries(leadData)) {
+    const updates: Record<string, unknown> = { updatedAt: new Date() };
+    const existingRecord = existing as Record<string, unknown>;
+    for (const [k, v] of Object.entries(leadData as Record<string, unknown>)) {
       if (v !== undefined && v !== null && v !== "") {
-        if (!(existing as any)[k]) updates[k] = v;
+        if (!existingRecord[k]) updates[k] = v;
       }
     }
     const [updated] = await db.update(leadsTable).set(updates).where(eq(leadsTable.id, existing.id)).returning();

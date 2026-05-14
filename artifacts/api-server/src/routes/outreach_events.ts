@@ -10,7 +10,7 @@ router.get("/outreach-events", requireAuth, async (req, res) => {
     const { leadId } = req.query;
     const data = leadId
       ? await db.select().from(outreachEventsTable)
-          .where(eq(outreachEventsTable.leadId, parseInt(leadId as string)))
+          .where(eq(outreachEventsTable.leadId, parseInt(String(leadId))))
           .orderBy(desc(outreachEventsTable.createdAt))
       : await db.select().from(outreachEventsTable).orderBy(desc(outreachEventsTable.createdAt));
     res.json(data);
@@ -32,7 +32,7 @@ router.post("/outreach-events", requireAuth, async (req, res) => {
 
 router.patch("/outreach-events/:id", requireAuth, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params["id"]));
     const [updated] = await db
       .update(outreachEventsTable)
       .set(req.body)

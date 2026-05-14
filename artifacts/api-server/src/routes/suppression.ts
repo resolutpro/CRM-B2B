@@ -25,7 +25,7 @@ router.post("/suppression", requireAuth, async (req, res) => {
 
 router.delete("/suppression/:id", requireAuth, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params["id"]));
     await db.delete(suppressionListTable).where(eq(suppressionListTable.id, id));
     res.json({ ok: true });
   } catch (err) {

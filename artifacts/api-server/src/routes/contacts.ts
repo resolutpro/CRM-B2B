@@ -9,7 +9,7 @@ router.get("/contacts", requireAuth, async (req, res) => {
   try {
     const { leadId } = req.query;
     const data = leadId
-      ? await db.select().from(contactsTable).where(eq(contactsTable.leadId, parseInt(leadId as string)))
+      ? await db.select().from(contactsTable).where(eq(contactsTable.leadId, parseInt(String(leadId))))
       : await db.select().from(contactsTable);
     res.json(data);
   } catch (err) {
@@ -28,7 +28,7 @@ router.post("/contacts", requireAuth, async (req, res) => {
 
 router.patch("/contacts/:id", requireAuth, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params["id"]));
     const [updated] = await db
       .update(contactsTable)
       .set({ ...req.body, updatedAt: new Date() })
@@ -42,7 +42,7 @@ router.patch("/contacts/:id", requireAuth, async (req, res) => {
 
 router.delete("/contacts/:id", requireAuth, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params["id"]));
     await db.delete(contactsTable).where(eq(contactsTable.id, id));
     res.json({ ok: true });
   } catch (err) {

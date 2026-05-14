@@ -4,21 +4,21 @@ import {
   leadsTable, contactsTable, emailDraftsTable,
   outreachEventsTable, repliesTable, tasksTable, suppressionListTable
 } from "@workspace/db";
-import { eq, or, ilike, and, gte, sql, desc, asc, count } from "drizzle-orm";
+import { eq, or, ilike, and, gte, desc, asc, count } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
 
 const router = Router();
 
-const PROTECTED_STATUSES = ["cliente_ganado", "no_contactar", "baja_solicitada"];
+const APPROVAL_STATUS = "aprobado_para_contactar";
 
 router.get("/leads", requireAuth, async (req, res) => {
   try {
     const { query, status, priority, minScore, sortBy, sortDir, page, limit } = req.query;
-    const pageNum = parseInt((page as string) || "1");
-    const limitNum = Math.min(parseInt((limit as string) || "50"), 200);
+    const pageNum = parseInt(String(page || "1"));
+    const limitNum = Math.min(parseInt(String(limit || "50")), 200);
     const offset = (pageNum - 1) * limitNum;
 
-    const conditions: any[] = [];
+    const conditions: ReturnType<typeof eq>[] = [];
     if (query) {
       const q = `%${query}%`;
       conditions.push(or(
@@ -26,16 +26,16 @@ router.get("/leads", requireAuth, async (req, res) => {
         ilike(leadsTable.city, q),
         ilike(leadsTable.email, q),
         ilike(leadsTable.businessType, q),
-      ));
+      )!);
     }
-    if (status) conditions.push(eq(leadsTable.crmStatus, status as string));
-    if (priority) conditions.push(eq(leadsTable.priority, priority as string));
-    if (minScore) conditions.push(gte(leadsTable.fitScore, parseInt(minScore as string)));
+    if (status) conditions.push(eq(leadsTable.crmStatus, String(status)));
+    if (priority) conditions.push(eq(leadsTable.priority, String(priority)));
+    if (minScore) conditions.push(gte(leadsTable.fitScore, parseInt(String(minScore))));
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
 
-    let orderBy: any;
-    const dir = (sortDir as string) === "desc" ? desc : asc;
+    const dir = String(sortDir) === "desc" ? desc : asc;
+    let orderBy: ReturnType<typeof desc>;
     if (sortBy === "fitScore") orderBy = dir(leadsTable.fitScore);
     else if (sortBy === "crmStatus") orderBy = dir(leadsTable.crmStatus);
     else orderBy = dir(leadsTable.createdAt);
@@ -62,7 +62,7 @@ router.post("/leads", requireAuth, async (req, res) => {
 
 router.get("/leads/:id", requireAuth, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params["id"]));
     const [lead] = await db.select().from(leadsTable).where(eq(leadsTable.id, id));
     if (!lead) { res.status(404).json({ error: "Lead no encontrado" }); return; }
 
@@ -82,10 +82,43 @@ router.get("/leads/:id", requireAuth, async (req, res) => {
 
 router.patch("/leads/:id", requireAuth, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params["id"]));
+    const body = req.body as Record<string, unknown>;
+
+    if (body["crmStatus"] === APPROVAL_STATUS) {
+      const [current] = await db.select().from(leadsTable).where(eq(leadsTable.id, id));
+      if (!current) { res.status(404).json({ error: "Lead no encontrado" }); return; }
+
+      if (current.email) {
+        const email = current.email.toLowerCase();
+        const domain = email.split("@")[1] ?? "";
+        const suppressed = await db
+          .select()
+          .from(suppressionListTable)
+          .where(
+            or(
+              eq(suppressionListTable.email, email),
+              eq(suppressionListTable.domain, domain),
+            ),
+          )
+          .limit(1);
+
+        if (suppressed.length > 0) {
+          const entry = suppressed[0]!;
+          const reason = entry.reason ?? "sin motivo especificado";
+          res.status(422).json({
+            error: "Lead bloqueado por lista de supresión",
+            detail: `El email "${current.email}" o su dominio "${domain}" está en la lista de supresión. Motivo: ${reason}`,
+            suppressionId: entry.id,
+          });
+          return;
+        }
+      }
+    }
+
     const [updated] = await db
       .update(leadsTable)
-      .set({ ...req.body, updatedAt: new Date() })
+      .set({ ...body, updatedAt: new Date() })
       .where(eq(leadsTable.id, id))
       .returning();
     if (!updated) { res.status(404).json({ error: "Lead no encontrado" }); return; }
@@ -97,7 +130,7 @@ router.patch("/leads/:id", requireAuth, async (req, res) => {
 
 router.delete("/leads/:id", requireAuth, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params["id"]));
     await db.delete(leadsTable).where(eq(leadsTable.id, id));
     res.json({ ok: true });
   } catch (err) {
@@ -107,7 +140,7 @@ router.delete("/leads/:id", requireAuth, async (req, res) => {
 
 router.post("/leads/:id/suppress", requireAuth, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params["id"]));
     const [updated] = await db
       .update(leadsTable)
       .set({ crmStatus: "no_contactar", updatedAt: new Date() })

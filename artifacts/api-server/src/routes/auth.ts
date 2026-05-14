@@ -9,7 +9,7 @@ const router = Router();
 
 router.post("/auth/login", async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const { username, password } = req.body as { username: string; password: string };
     if (!username || !password) {
       res.status(400).json({ error: "Usuario y contraseña requeridos" });
       return;
@@ -24,8 +24,8 @@ router.post("/auth/login", async (req, res) => {
       res.status(401).json({ error: "Credenciales inválidas" });
       return;
     }
-    (req.session as any).userId = user.id;
-    (req.session as any).username = user.username;
+    req.session.userId = user.id;
+    req.session.username = user.username;
     res.json({ id: user.id, username: user.username });
   } catch (err) {
     res.status(500).json({ error: "Error interno" });
@@ -38,9 +38,8 @@ router.post("/auth/logout", (req, res) => {
   });
 });
 
-router.get("/auth/me", requireAuth, async (req, res) => {
-  const session = req.session as any;
-  res.json({ id: session.userId, username: session.username });
+router.get("/auth/me", requireAuth, (req, res) => {
+  res.json({ id: req.session.userId, username: req.session.username });
 });
 
 export default router;

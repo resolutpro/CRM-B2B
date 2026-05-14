@@ -37,4 +37,3 @@ channel = "stable-25_05"
 [userenv]
 
 [userenv.shared]
-AGENT_API_KEY = "86d20bf8791531d802e9ebf071db06b000c719caea64cdc27396a167af2aed13"
