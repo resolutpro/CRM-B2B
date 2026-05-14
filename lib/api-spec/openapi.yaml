@@ -3,20 +3,43 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: CRM La Bercianita API specification
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication
+  - name: leads
+    description: Lead management
+  - name: contacts
+    description: Contact management
+  - name: emailDrafts
+    description: Email draft management
+  - name: outreachEvents
+    description: Outreach event management
+  - name: replies
+    description: Reply management
+  - name: tasks
+    description: Task management
+  - name: suppression
+    description: Suppression list
+  - name: settings
+    description: App settings
+  - name: agentRuns
+    description: Agent run logs
+  - name: dashboard
+    description: Dashboard stats
+  - name: agent
+    description: Agent API for OpenClaw
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +47,974 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /dashboard/stats:
+    get:
+      operationId: getDashboardStats
+      tags: [dashboard]
+      summary: Get dashboard statistics
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /leads:
+    get:
+      operationId: getLeads
+      tags: [leads]
+      summary: List leads
+      parameters:
+        - name: query
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: priority
+          in: query
+          schema:
+            type: string
+        - name: minScore
+          in: query
+          schema:
+            type: integer
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+        - name: sortDir
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of leads
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeadsPage"
+    post:
+      operationId: createLead
+      tags: [leads]
+      summary: Create a lead
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LeadInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lead"
+
+  /leads/{id}:
+    get:
+      operationId: getLead
+      tags: [leads]
+      summary: Get a lead
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Lead
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeadDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateLead
+      tags: [leads]
+      summary: Update a lead
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LeadUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lead"
+    delete:
+      operationId: deleteLead
+      tags: [leads]
+      summary: Delete a lead
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /leads/{id}/suppress:
+    post:
+      operationId: suppressLead
+      tags: [leads]
+      summary: Mark lead as no-contact
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Suppressed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lead"
+
+  /contacts:
+    get:
+      operationId: getContacts
+      tags: [contacts]
+      summary: List contacts
+      parameters:
+        - name: leadId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of contacts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Contact"
+    post:
+      operationId: createContact
+      tags: [contacts]
+      summary: Create a contact
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContactInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Contact"
+
+  /contacts/{id}:
+    patch:
+      operationId: updateContact
+      tags: [contacts]
+      summary: Update a contact
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContactUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Contact"
+    delete:
+      operationId: deleteContact
+      tags: [contacts]
+      summary: Delete a contact
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /email-drafts:
+    get:
+      operationId: getEmailDrafts
+      tags: [emailDrafts]
+      summary: List email drafts
+      parameters:
+        - name: leadId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of drafts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EmailDraft"
+    post:
+      operationId: createEmailDraft
+      tags: [emailDrafts]
+      summary: Create an email draft
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmailDraftInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmailDraft"
+
+  /email-drafts/{id}:
+    patch:
+      operationId: updateEmailDraft
+      tags: [emailDrafts]
+      summary: Update an email draft
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmailDraftUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmailDraft"
+    delete:
+      operationId: deleteEmailDraft
+      tags: [emailDrafts]
+      summary: Delete an email draft
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /outreach-events:
+    get:
+      operationId: getOutreachEvents
+      tags: [outreachEvents]
+      summary: List outreach events
+      parameters:
+        - name: leadId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OutreachEvent"
+    post:
+      operationId: createOutreachEvent
+      tags: [outreachEvents]
+      summary: Create an outreach event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OutreachEventInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OutreachEvent"
+
+  /outreach-events/{id}:
+    patch:
+      operationId: updateOutreachEvent
+      tags: [outreachEvents]
+      summary: Update an outreach event
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OutreachEventUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OutreachEvent"
+
+  /replies:
+    get:
+      operationId: getReplies
+      tags: [replies]
+      summary: List replies
+      parameters:
+        - name: leadId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of replies
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Reply"
+    post:
+      operationId: createReply
+      tags: [replies]
+      summary: Create a reply
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReplyInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Reply"
+
+  /tasks:
+    get:
+      operationId: getTasks
+      tags: [tasks]
+      summary: List tasks
+      parameters:
+        - name: leadId
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Task"
+    post:
+      operationId: createTask
+      tags: [tasks]
+      summary: Create a task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+
+  /tasks/{id}:
+    patch:
+      operationId: updateTask
+      tags: [tasks]
+      summary: Update a task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+    delete:
+      operationId: deleteTask
+      tags: [tasks]
+      summary: Delete a task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /suppression:
+    get:
+      operationId: getSuppression
+      tags: [suppression]
+      summary: List suppression entries
+      responses:
+        "200":
+          description: List of suppressed emails/domains
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SuppressionEntry"
+    post:
+      operationId: createSuppression
+      tags: [suppression]
+      summary: Add to suppression list
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SuppressionInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuppressionEntry"
+
+  /suppression/{id}:
+    delete:
+      operationId: deleteSuppression
+      tags: [suppression]
+      summary: Remove from suppression list
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /settings:
+    get:
+      operationId: getSettings
+      tags: [settings]
+      summary: Get all settings
+      responses:
+        "200":
+          description: Settings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Setting"
+    patch:
+      operationId: updateSettings
+      tags: [settings]
+      summary: Update settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SettingsUpdate"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Setting"
+
+  /agent-runs:
+    get:
+      operationId: getAgentRuns
+      tags: [agentRuns]
+      summary: List agent runs
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of agent runs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AgentRun"
+    post:
+      operationId: createAgentRun
+      tags: [agentRuns]
+      summary: Create agent run log
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AgentRunInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentRun"
+
+  /agent/health:
+    get:
+      operationId: agentHealth
+      tags: [agent]
+      summary: Agent health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentHealthStatus"
+
+  /agent/config:
+    get:
+      operationId: agentConfig
+      tags: [agent]
+      summary: Get agent configuration
+      responses:
+        "200":
+          description: Config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentConfig"
+
+  /agent/leads/upsert:
+    post:
+      operationId: agentUpsertLead
+      tags: [agent]
+      summary: Create or update a lead (upsert)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LeadInput"
+      responses:
+        "200":
+          description: Upserted lead
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lead"
+
+  /agent/leads/bulk-upsert:
+    post:
+      operationId: agentBulkUpsertLeads
+      tags: [agent]
+      summary: Bulk create or update leads
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkLeadUpsert"
+      responses:
+        "200":
+          description: Bulk upsert result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BulkUpsertResult"
+
+  /agent/leads:
+    get:
+      operationId: agentGetLeads
+      tags: [agent]
+      summary: Search leads (agent)
+      parameters:
+        - name: query
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: city
+          in: query
+          schema:
+            type: string
+        - name: business_type
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of leads
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Lead"
+
+  /agent/leads/{id}:
+    get:
+      operationId: agentGetLead
+      tags: [agent]
+      summary: Get lead by ID (agent)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Lead
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lead"
+    patch:
+      operationId: agentUpdateLead
+      tags: [agent]
+      summary: Update lead status (agent)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LeadUpdate"
+      responses:
+        "200":
+          description: Updated lead
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lead"
+
+  /agent/contacts:
+    post:
+      operationId: agentCreateContact
+      tags: [agent]
+      summary: Create a contact (agent)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContactInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Contact"
+
+  /agent/email-drafts:
+    post:
+      operationId: agentCreateEmailDraft
+      tags: [agent]
+      summary: Create email draft (agent)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmailDraftInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmailDraft"
+
+  /agent/events:
+    post:
+      operationId: agentCreateEvent
+      tags: [agent]
+      summary: Create outreach event (agent)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OutreachEventInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OutreachEvent"
+
+  /agent/replies:
+    post:
+      operationId: agentCreateReply
+      tags: [agent]
+      summary: Create a reply (agent)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReplyInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Reply"
+
+  /agent/tasks:
+    post:
+      operationId: agentCreateTask
+      tags: [agent]
+      summary: Create a task (agent)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+
+  /agent/suppression:
+    get:
+      operationId: agentGetSuppression
+      tags: [agent]
+      summary: Get suppression list (agent)
+      responses:
+        "200":
+          description: Suppression list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SuppressionEntry"
+    post:
+      operationId: agentCreateSuppression
+      tags: [agent]
+      summary: Add to suppression list (agent)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SuppressionInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuppressionEntry"
+
+  /agent/runs:
+    post:
+      operationId: agentCreateRun
+      tags: [agent]
+      summary: Create agent run log (agent)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AgentRunInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentRun"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +1025,640 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+
+    SuccessResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+      required: [ok]
+
+    LoginInput:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+
+    AuthUser:
+      type: object
+      required: [id, username]
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+
+    DashboardStats:
+      type: object
+      required: [totalLeads, byStatus, byBusinessType, byCity, recentEvents, responseRate]
+      properties:
+        totalLeads:
+          type: integer
+        byStatus:
+          type: array
+          items:
+            $ref: "#/components/schemas/CountGroup"
+        byBusinessType:
+          type: array
+          items:
+            $ref: "#/components/schemas/CountGroup"
+        byCity:
+          type: array
+          items:
+            $ref: "#/components/schemas/CountGroup"
+        recentEvents:
+          type: array
+          items:
+            $ref: "#/components/schemas/OutreachEvent"
+        responseRate:
+          type: number
+        pendingTasks:
+          type: integer
+
+    CountGroup:
+      type: object
+      required: [label, count]
+      properties:
+        label:
+          type: string
+        count:
+          type: integer
+
+    Lead:
+      type: object
+      required: [id, businessName, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        businessName:
+          type: string
+        businessType:
+          type: ["string", "null"]
+        city:
+          type: ["string", "null"]
+        province:
+          type: ["string", "null"]
+        country:
+          type: ["string", "null"]
+        website:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        instagram:
+          type: ["string", "null"]
+        sourceUrl:
+          type: ["string", "null"]
+        sourceNotes:
+          type: ["string", "null"]
+        fitScore:
+          type: ["integer", "null"]
+        fitReason:
+          type: ["string", "null"]
+        consentStatus:
+          type: ["string", "null"]
+        crmStatus:
+          type: ["string", "null"]
+        priority:
+          type: ["string", "null"]
+        assignedTo:
+          type: ["string", "null"]
+        lastContactedAt:
+          type: ["string", "null"]
+        nextActionAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    LeadDetail:
+      allOf:
+        - $ref: "#/components/schemas/Lead"
+        - type: object
+          properties:
+            contacts:
+              type: array
+              items:
+                $ref: "#/components/schemas/Contact"
+            emailDrafts:
+              type: array
+              items:
+                $ref: "#/components/schemas/EmailDraft"
+            outreachEvents:
+              type: array
+              items:
+                $ref: "#/components/schemas/OutreachEvent"
+            replies:
+              type: array
+              items:
+                $ref: "#/components/schemas/Reply"
+            tasks:
+              type: array
+              items:
+                $ref: "#/components/schemas/Task"
+
+    LeadsPage:
+      type: object
+      required: [data, total, page, limit]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Lead"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    LeadInput:
+      type: object
+      required: [businessName]
+      properties:
+        businessName:
+          type: string
+        businessType:
+          type: string
+        city:
+          type: string
+        province:
+          type: string
+        country:
+          type: string
+        website:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        instagram:
+          type: string
+        sourceUrl:
+          type: string
+        sourceNotes:
+          type: string
+        fitScore:
+          type: integer
+        fitReason:
+          type: string
+        consentStatus:
+          type: string
+        crmStatus:
+          type: string
+        priority:
+          type: string
+        assignedTo:
+          type: string
+        lastContactedAt:
+          type: string
+        nextActionAt:
+          type: string
+
+    LeadUpdate:
+      type: object
+      properties:
+        businessName:
+          type: string
+        businessType:
+          type: string
+        city:
+          type: string
+        province:
+          type: string
+        country:
+          type: string
+        website:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        instagram:
+          type: string
+        sourceUrl:
+          type: string
+        sourceNotes:
+          type: string
+        fitScore:
+          type: integer
+        fitReason:
+          type: string
+        consentStatus:
+          type: string
+        crmStatus:
+          type: string
+        priority:
+          type: string
+        assignedTo:
+          type: string
+        lastContactedAt:
+          type: string
+        nextActionAt:
+          type: string
+
+    Contact:
+      type: object
+      required: [id, leadId, name, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        leadId:
+          type: integer
+        name:
+          type: string
+        role:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        sourceUrl:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    ContactInput:
+      type: object
+      required: [leadId, name]
+      properties:
+        leadId:
+          type: integer
+        name:
+          type: string
+        role:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        sourceUrl:
+          type: string
+
+    ContactUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        role:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        sourceUrl:
+          type: string
+
+    EmailDraft:
+      type: object
+      required: [id, leadId, subject, body, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        leadId:
+          type: integer
+        subject:
+          type: string
+        body:
+          type: string
+        status:
+          type: ["string", "null"]
+        createdBy:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    EmailDraftInput:
+      type: object
+      required: [leadId, subject, body]
+      properties:
+        leadId:
+          type: integer
+        subject:
+          type: string
+        body:
+          type: string
+        status:
+          type: string
+        createdBy:
+          type: string
+
+    EmailDraftUpdate:
+      type: object
+      properties:
+        subject:
+          type: string
+        body:
+          type: string
+        status:
+          type: string
+
+    OutreachEvent:
+      type: object
+      required: [id, leadId, channel, direction, createdAt]
+      properties:
+        id:
+          type: integer
+        leadId:
+          type: integer
+        channel:
+          type: string
+        direction:
+          type: string
+        subject:
+          type: ["string", "null"]
+        body:
+          type: ["string", "null"]
+        status:
+          type: ["string", "null"]
+        eventAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    OutreachEventInput:
+      type: object
+      required: [leadId, channel, direction]
+      properties:
+        leadId:
+          type: integer
+        channel:
+          type: string
+        direction:
+          type: string
+        subject:
+          type: string
+        body:
+          type: string
+        status:
+          type: string
+        eventAt:
+          type: string
+
+    OutreachEventUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+        subject:
+          type: string
+        body:
+          type: string
+
+    Reply:
+      type: object
+      required: [id, leadId, body, createdAt]
+      properties:
+        id:
+          type: integer
+        leadId:
+          type: integer
+        fromEmail:
+          type: ["string", "null"]
+        body:
+          type: string
+        intent:
+          type: ["string", "null"]
+        sentiment:
+          type: ["string", "null"]
+        receivedAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    ReplyInput:
+      type: object
+      required: [leadId, body]
+      properties:
+        leadId:
+          type: integer
+        fromEmail:
+          type: string
+        body:
+          type: string
+        intent:
+          type: string
+        sentiment:
+          type: string
+        receivedAt:
+          type: string
+
+    Task:
+      type: object
+      required: [id, leadId, title, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        leadId:
+          type: integer
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        taskType:
+          type: ["string", "null"]
+        dueDate:
+          type: ["string", "null"]
+        status:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    TaskInput:
+      type: object
+      required: [leadId, title]
+      properties:
+        leadId:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        taskType:
+          type: string
+        dueDate:
+          type: string
+        status:
+          type: string
+
+    TaskUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        taskType:
+          type: string
+        dueDate:
+          type: string
+        status:
+          type: string
+
+    SuppressionEntry:
+      type: object
+      required: [id, createdAt]
+      properties:
+        id:
+          type: integer
+        email:
+          type: ["string", "null"]
+        domain:
+          type: ["string", "null"]
+        reason:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    SuppressionInput:
+      type: object
+      properties:
+        email:
+          type: string
+        domain:
+          type: string
+        reason:
+          type: string
+
+    Setting:
+      type: object
+      required: [id, key, value, updatedAt]
+      properties:
+        id:
+          type: integer
+        key:
+          type: string
+        value:
+          type: string
+        updatedAt:
+          type: string
+
+    SettingsUpdate:
+      type: object
+      additionalProperties:
+        type: string
+
+    AgentRun:
+      type: object
+      required: [id, agentName, createdAt]
+      properties:
+        id:
+          type: integer
+        agentName:
+          type: string
+        runType:
+          type: ["string", "null"]
+        status:
+          type: ["string", "null"]
+        startedAt:
+          type: ["string", "null"]
+        finishedAt:
+          type: ["string", "null"]
+        summary:
+          type: ["string", "null"]
+        errors:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    AgentRunInput:
+      type: object
+      required: [agentName]
+      properties:
+        agentName:
+          type: string
+        runType:
+          type: string
+        status:
+          type: string
+        startedAt:
+          type: string
+        finishedAt:
+          type: string
+        summary:
+          type: string
+        errors:
+          type: string
+
+    AgentHealthStatus:
+      type: object
+      required: [ok, service, timestamp]
+      properties:
+        ok:
+          type: boolean
+        service:
+          type: string
+        timestamp:
+          type: string
+
+    AgentConfig:
+      type: object
+      required: [target_cities, target_business_types, min_score, daily_contact_limit, brand]
+      properties:
+        target_cities:
+          type: array
+          items:
+            type: string
+        target_business_types:
+          type: array
+          items:
+            type: string
+        min_score:
+          type: integer
+        daily_contact_limit:
+          type: integer
+        brand:
+          type: object
+          required: [name, website]
+          properties:
+            name:
+              type: string
+            website:
+              type: string
+            sender_name:
+              type: string
+            sender_email:
+              type: string
+            phone:
+              type: string
+
+    BulkLeadUpsert:
+      type: object
+      required: [leads]
+      properties:
+        leads:
+          type: array
+          items:
+            $ref: "#/components/schemas/LeadInput"
+
+    BulkUpsertResult:
+      type: object
+      required: [created, updated, skipped, errors]
+      properties:
+        created:
+          type: integer
+        updated:
+          type: integer
+        skipped:
+          type: integer
+        errors:
+          type: array
+          items:
+            type: string
