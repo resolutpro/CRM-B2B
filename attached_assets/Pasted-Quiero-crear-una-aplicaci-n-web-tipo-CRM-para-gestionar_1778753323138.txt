@@ -1,0 +1,554 @@
+Quiero crear una aplicación web tipo CRM para gestionar prospección comercial B2B de La Bercianita, una tienda de productos gourmet artesanos de El Bierzo.
+
+La aplicación debe servir para que un agente externo llamado OpenClaw pueda:
+1. Buscar potenciales clientes.
+2. Subir leads a la base de datos mediante API.
+3. Consultar datos existentes si necesita evitar duplicados.
+4. Actualizar el estado de cada lead.
+5. Crear borradores de email comercial.
+6. Registrar eventos de contacto, respuestas, tareas y bajas.
+
+IMPORTANTE:
+- No uses datos mock.
+- No uses arrays hardcodeados para pintar leads.
+- Toda la información debe salir siempre de la base de datos.
+- Si la base de datos está vacía, la interfaz debe mostrar estados vacíos reales tipo “No hay leads todavía”.
+- La app debe tener login obligatorio.
+- Crea un usuario inicial:
+  - usuario: admin
+  - contraseña: admin123
+- La contraseña debe guardarse hasheada en la base de datos, no en texto plano.
+- Todas las páginas privadas deben requerir sesión.
+- No dejes el dashboard accesible sin login.
+
+Stack recomendado:
+- Next.js o React + backend Node/Express.
+- Base de datos PostgreSQL si está disponible en Replit.
+- ORM Prisma si encaja bien.
+- Tailwind CSS para el diseño.
+- Autenticación con sesión segura o JWT httpOnly.
+- API REST documentada.
+- Diseño limpio, responsive y profesional.
+
+Contexto del negocio:
+La Bercianita vende productos gourmet artesanos de El Bierzo: pimientos asados, pera conferencia, castañas, mermeladas, pera al vino Mencía, crema de castañas y packs gourmet. Los clientes objetivo son tiendas gourmet, delicatessen, vinotecas, queserías, charcuterías premium, hoteles rurales, restaurantes de producto, tiendas de regalos gourmet y empresas de cestas corporativas.
+
+Funcionalidades principales del CRM:
+
+1. Login
+- Pantalla de login.
+- Usuario inicial admin / admin123.
+- Sesión persistente.
+- Logout.
+- Protección de rutas.
+
+2. Dashboard
+Debe mostrar métricas reales desde la base de datos:
+- Total de leads.
+- Leads nuevos.
+- Leads validados.
+- Leads contactados.
+- Leads interesados.
+- Leads ganados.
+- Leads descartados.
+- Leads en lista de no contactar.
+- Tasa de respuesta.
+- Leads por tipo de negocio.
+- Leads por ciudad.
+- Últimos eventos.
+
+3. Gestión de leads
+Crear una tabla de leads con filtros y búsqueda.
+
+Campos principales:
+- id
+- business_name
+- business_type
+- city
+- province
+- country
+- website
+- email
+- phone
+- instagram
+- source_url
+- source_notes
+- fit_score
+- fit_reason
+- consent_status
+- crm_status
+- priority
+- assigned_to
+- last_contacted_at
+- next_action_at
+- created_at
+- updated_at
+
+Estados posibles de crm_status:
+- nuevo
+- validado
+- pendiente_revision
+- email_preparado
+- aprobado_para_contactar
+- contactado
+- respondio_interesado
+- respondio_no_interesado
+- seguimiento
+- muestra_enviada
+- negociacion
+- cliente_ganado
+- cliente_perdido
+- no_contactar
+- descartado
+
+Estados posibles de consent_status:
+- desconocido
+- email_publico_corporativo
+- contacto_manual_recomendado
+- consentimiento_obtenido
+- relacion_previa
+- no_contactar
+- baja_solicitada
+
+Prioridades:
+- alta
+- media
+- baja
+
+La tabla debe permitir:
+- Buscar por nombre, ciudad, email, tipo de negocio.
+- Filtrar por estado.
+- Filtrar por prioridad.
+- Filtrar por score mínimo.
+- Ordenar por fecha, score y estado.
+- Ver detalle de cada lead.
+- Editar lead.
+- Borrar lead.
+- Marcar como no contactar.
+- Aprobar para contacto.
+- Cambiar estado manualmente.
+
+4. Ficha de lead
+Cada lead debe tener una página de detalle con:
+- Datos del negocio.
+- Motivo de encaje.
+- Score.
+- Estado.
+- Fuente.
+- Contactos asociados.
+- Borradores de email.
+- Eventos de contacto.
+- Respuestas.
+- Tareas pendientes.
+- Botones de acción:
+  - Aprobar contacto.
+  - Preparar email.
+  - Marcar contactado.
+  - Marcar interesado.
+  - Marcar no interesado.
+  - Marcar no contactar.
+  - Crear tarea.
+  - Editar datos.
+
+5. Contactos
+Tabla contacts:
+- id
+- lead_id
+- name
+- role
+- email
+- phone
+- source_url
+- created_at
+- updated_at
+
+Un lead puede tener varios contactos.
+
+6. Borradores de email
+Tabla email_drafts:
+- id
+- lead_id
+- subject
+- body
+- status
+- created_by
+- created_at
+- updated_at
+
+Estados:
+- borrador
+- pendiente_revision
+- aprobado
+- enviado
+- rechazado
+
+La web debe permitir:
+- Ver borradores.
+- Editarlos.
+- Aprobarlos.
+- Rechazarlos.
+- Marcar como enviados.
+- No enviar automáticamente en esta primera versión salvo que exista una función explícita y segura.
+
+7. Eventos de contacto
+Tabla outreach_events:
+- id
+- lead_id
+- channel
+- direction
+- subject
+- body
+- status
+- event_at
+- created_at
+
+channel:
+- email
+- telefono
+- formulario_web
+- instagram
+- linkedin
+- otro
+
+direction:
+- outbound
+- inbound
+
+status:
+- preparado
+- enviado
+- respondido
+- error
+- cancelado
+
+8. Respuestas
+Tabla replies:
+- id
+- lead_id
+- from_email
+- body
+- intent
+- sentiment
+- received_at
+- created_at
+
+intent:
+- interesado
+- no_interesado
+- pedir_catalogo
+- pedir_precios
+- pedir_muestras
+- baja
+- otro
+
+9. Tareas
+Tabla tasks:
+- id
+- lead_id
+- title
+- description
+- task_type
+- due_date
+- status
+- created_at
+- updated_at
+
+task_type:
+- llamar
+- enviar_email
+- seguimiento
+- enviar_catalogo
+- enviar_muestra
+- revisar
+- otro
+
+status:
+- pendiente
+- en_progreso
+- completada
+- cancelada
+
+10. Lista de supresión / no contactar
+Tabla suppression_list:
+- id
+- email
+- domain
+- reason
+- created_at
+
+La aplicación debe impedir que un lead con email o dominio en suppression_list sea aprobado para contacto sin mostrar una advertencia clara.
+
+11. Logs del agente
+Tabla agent_runs:
+- id
+- agent_name
+- run_type
+- status
+- started_at
+- finished_at
+- summary
+- errors
+- created_at
+
+12. Configuración
+Tabla settings:
+- id
+- key
+- value
+- updated_at
+
+Debe incluir configuración editable desde la interfaz:
+- ciudades objetivo
+- tipos de negocio objetivo
+- score mínimo recomendado
+- límite diario recomendado de contactos
+- email comercial de La Bercianita
+- nombre del remitente
+- teléfono
+- web
+
+API para OpenClaw:
+
+Todas las rutas del agente deben requerir autenticación mediante header:
+
+Authorization: Bearer AGENT_API_KEY
+
+Crea una variable de entorno:
+AGENT_API_KEY
+
+Si no existe, documenta claramente que hay que crearla.
+
+Endpoints necesarios:
+
+1. Health check
+GET /api/agent/health
+
+Respuesta:
+{
+  "ok": true,
+  "service": "labercianita-crm",
+  "timestamp": "..."
+}
+
+2. Obtener configuración
+GET /api/agent/config
+
+Debe devolver:
+{
+  "target_cities": [],
+  "target_business_types": [],
+  "min_score": 60,
+  "daily_contact_limit": 20,
+  "brand": {
+    "name": "La Bercianita",
+    "website": "https://www.labercianita.com/",
+    "sender_name": "",
+    "sender_email": "",
+    "phone": ""
+  }
+}
+
+3. Crear o actualizar un lead
+POST /api/agent/leads/upsert
+
+Body:
+{
+  "business_name": "Nombre tienda",
+  "business_type": "tienda gourmet",
+  "city": "Madrid",
+  "province": "Madrid",
+  "country": "España",
+  "website": "https://...",
+  "email": "info@...",
+  "phone": "...",
+  "instagram": "...",
+  "source_url": "https://...",
+  "source_notes": "Encontrado en su web oficial",
+  "fit_score": 85,
+  "fit_reason": "Vende productos gourmet, conservas premium y packs regalo.",
+  "consent_status": "email_publico_corporativo",
+  "crm_status": "nuevo",
+  "priority": "alta"
+}
+
+Reglas:
+- Si ya existe un lead con el mismo website o email, actualizarlo en vez de duplicarlo.
+- Si existe pero los nuevos datos son mejores, completar campos vacíos.
+- No sobrescribir manualmente estados avanzados como cliente_ganado, no_contactar o baja_solicitada sin lógica de seguridad.
+- Devolver el lead final guardado.
+
+4. Subida masiva de leads
+POST /api/agent/leads/bulk-upsert
+
+Body:
+{
+  "leads": [
+    { ... },
+    { ... }
+  ]
+}
+
+Debe devolver:
+{
+  "created": 10,
+  "updated": 5,
+  "skipped": 2,
+  "errors": []
+}
+
+5. Buscar leads existentes
+GET /api/agent/leads?query=&status=&city=&business_type=&limit=50
+
+Debe devolver leads reales desde la base de datos.
+
+6. Obtener un lead por ID
+GET /api/agent/leads/:id
+
+7. Actualizar estado de lead
+PATCH /api/agent/leads/:id
+
+Body parcial permitido:
+{
+  "crm_status": "validado",
+  "consent_status": "email_publico_corporativo",
+  "fit_score": 90,
+  "fit_reason": "...",
+  "priority": "alta",
+  "last_contacted_at": "...",
+  "next_action_at": "..."
+}
+
+8. Crear contacto
+POST /api/agent/contacts
+
+Body:
+{
+  "lead_id": 1,
+  "name": "Nombre persona",
+  "role": "Responsable de compras",
+  "email": "persona@...",
+  "phone": "...",
+  "source_url": "https://..."
+}
+
+9. Crear borrador de email
+POST /api/agent/email-drafts
+
+Body:
+{
+  "lead_id": 1,
+  "subject": "Productos artesanos de El Bierzo para [Tienda]",
+  "body": "Contenido del email...",
+  "status": "pendiente_revision",
+  "created_by": "openclaw"
+}
+
+10. Crear evento
+POST /api/agent/events
+
+Body:
+{
+  "lead_id": 1,
+  "channel": "email",
+  "direction": "outbound",
+  "subject": "...",
+  "body": "...",
+  "status": "preparado",
+  "event_at": "..."
+}
+
+11. Crear respuesta
+POST /api/agent/replies
+
+Body:
+{
+  "lead_id": 1,
+  "from_email": "cliente@...",
+  "body": "...",
+  "intent": "pedir_catalogo",
+  "sentiment": "positivo",
+  "received_at": "..."
+}
+
+12. Crear tarea
+POST /api/agent/tasks
+
+Body:
+{
+  "lead_id": 1,
+  "title": "Enviar catálogo profesional",
+  "description": "El cliente ha pedido condiciones para tienda.",
+  "task_type": "enviar_catalogo",
+  "due_date": "...",
+  "status": "pendiente"
+}
+
+13. Añadir a lista de no contactar
+POST /api/agent/suppression
+
+Body:
+{
+  "email": "correo@...",
+  "domain": "dominio.com",
+  "reason": "baja_solicitada"
+}
+
+14. Consultar lista de no contactar
+GET /api/agent/suppression
+
+15. Crear log de ejecución del agente
+POST /api/agent/runs
+
+Body:
+{
+  "agent_name": "OpenClaw",
+  "run_type": "lead_search",
+  "status": "completed",
+  "started_at": "...",
+  "finished_at": "...",
+  "summary": "Se encontraron 25 leads en Madrid.",
+  "errors": ""
+}
+
+Interfaz:
+- Diseño limpio tipo SaaS/CRM.
+- Sidebar con:
+  - Dashboard
+  - Leads
+  - Borradores de email
+  - Tareas
+  - Respuestas
+  - No contactar
+  - Logs del agente
+  - Configuración
+- Tabla clara, filtros, badges de estado, colores por prioridad.
+- Formularios de creación y edición.
+- Validaciones.
+- Confirmación antes de borrar.
+- Mensajes de error claros.
+- No usar datos mock.
+
+Seguridad:
+- Login obligatorio.
+- Password hasheada.
+- API del agente protegida por AGENT_API_KEY.
+- Validar payloads.
+- Sanitizar inputs.
+- No exponer variables de entorno al frontend.
+- No mostrar contraseñas ni tokens en pantalla.
+- Añadir CORS seguro si aplica.
+
+Entregable:
+Quiero la aplicación funcionando en Replit con:
+- Base de datos inicializada.
+- Usuario admin creado.
+- Login funcionando.
+- CRUD de leads.
+- Dashboard real.
+- Endpoints del agente funcionando.
+- Sin datos mock.
+- README con:
+  - cómo arrancar
+  - variables de entorno necesarias
+  - endpoints disponibles
+  - usuario inicial admin/admin123
