@@ -1,9 +1,9 @@
-import { useState } from "react";
 import { Link } from "wouter";
 import { useGetEmailDrafts, useUpdateEmailDraft, getGetEmailDraftsQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { EMAIL_DRAFT_STATUS_LABELS, EMAIL_DRAFT_STATUS_COLORS, formatDate } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 const ALL_DRAFT_STATUSES = ["borrador", "pendiente_revision", "aprobado", "enviado", "rechazado"];
 
@@ -12,7 +12,7 @@ export default function EmailDraftsPage() {
   const qc = useQueryClient();
   const { toast } = useToast();
 
-  const params = { ...(filterStatus ? { leadId: undefined } : {}) };
+  const params = {};
   const { data: drafts, isLoading } = useGetEmailDrafts(params, {
     query: { queryKey: getGetEmailDraftsQueryKey(params) }
   });
@@ -62,11 +62,12 @@ export default function EmailDraftsPage() {
               <div className="flex items-start justify-between gap-4 mb-3">
                 <div className="flex-1 min-w-0">
                   <div className="font-medium text-foreground text-sm">{draft.subject}</div>
-                  {(draft as any).leadId && (
-                    <Link href={`/leads/${(draft as any).leadId}`}>
-                      <a className="text-xs text-primary hover:underline mt-0.5 inline-block">
-                        Lead #{(draft as any).leadId}
-                      </a>
+                  {draft.leadId && (
+                    <Link
+                      href={`/leads/${draft.leadId}`}
+                      className="text-xs text-primary hover:underline mt-0.5 inline-block"
+                    >
+                      Lead #{draft.leadId}
                     </Link>
                   )}
                 </div>

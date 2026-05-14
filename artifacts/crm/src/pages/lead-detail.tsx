@@ -7,6 +7,7 @@ import {
   useCreateContact, useDeleteContact,
   getGetLeadQueryKey
 } from "@workspace/api-client-react";
+import type { LeadDetail, Contact, EmailDraft, OutreachEvent, Reply, Task } from "@workspace/api-client-react";
 import {
   CRM_STATUS_LABELS, CRM_STATUS_COLORS, PRIORITY_COLORS, PRIORITY_LABELS,
   CONSENT_STATUS_LABELS, EMAIL_DRAFT_STATUS_LABELS, EMAIL_DRAFT_STATUS_COLORS,
@@ -16,6 +17,9 @@ import { ArrowLeft, Edit, Check, Ban, Phone, Mail, Globe, Instagram, Plus, X } f
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { LeadFormDialog } from "@/components/lead-form-dialog";
+
+type SuppressionErrorData = { error?: string; detail?: string };
+type ApiErrorLike = { status?: number; data?: SuppressionErrorData };
 
 export default function LeadDetailPage() {
   const [, params] = useRoute("/leads/:id");
@@ -40,9 +44,22 @@ export default function LeadDetailPage() {
   const invalidate = () => qc.invalidateQueries({ queryKey: getGetLeadQueryKey(id) });
 
   const handleStatusChange = async (crmStatus: string) => {
-    await updateMutation.mutateAsync({ id, data: { crmStatus } });
-    toast({ title: "Estado actualizado" });
-    invalidate();
+    try {
+      await updateMutation.mutateAsync({ id, data: { crmStatus } });
+      toast({ title: "Estado actualizado" });
+      invalidate();
+    } catch (err) {
+      const apiErr = err as ApiErrorLike;
+      if (apiErr?.status === 422) {
+        toast({
+          title: "Lead bloqueado por supresión",
+          description: apiErr.data?.detail ?? "Este email o dominio está en la lista de supresión.",
+          variant: "destructive",
+        });
+      } else {
+        toast({ title: "Error al cambiar estado", variant: "destructive" });
+      }
+    }
   };
 
   const handleDelete = async () => {
@@ -67,22 +84,22 @@ export default function LeadDetailPage() {
     <div className="p-8 text-center text-muted-foreground">Lead no encontrado</div>
   );
 
+  const detail = lead as LeadDetail;
+
   const tabs = [
     { id: "info", label: "Informacion" },
-    { id: "contacts", label: `Contactos (${(lead as any).contacts?.length ?? 0})` },
-    { id: "drafts", label: `Borradores (${(lead as any).emailDrafts?.length ?? 0})` },
-    { id: "events", label: `Eventos (${(lead as any).outreachEvents?.length ?? 0})` },
-    { id: "replies", label: `Respuestas (${(lead as any).replies?.length ?? 0})` },
-    { id: "tasks", label: `Tareas (${(lead as any).tasks?.length ?? 0})` },
+    { id: "contacts", label: `Contactos (${detail.contacts?.length ?? 0})` },
+    { id: "drafts", label: `Borradores (${detail.emailDrafts?.length ?? 0})` },
+    { id: "events", label: `Eventos (${detail.outreachEvents?.length ?? 0})` },
+    { id: "replies", label: `Respuestas (${detail.replies?.length ?? 0})` },
+    { id: "tasks", label: `Tareas (${detail.tasks?.length ?? 0})` },
   ];
 
   return (
     <div className="p-6 space-y-5 max-w-5xl">
       <div className="flex items-center gap-3">
-        <Link href="/leads">
-          <a className="p-1.5 rounded hover:bg-muted text-muted-foreground">
-            <ArrowLeft className="w-4 h-4" />
-          </a>
+        <Link href="/leads" className="p-1.5 rounded hover:bg-muted text-muted-foreground">
+          <ArrowLeft className="w-4 h-4" />
         </Link>
         <div className="flex-1">
           <h1 className="text-xl font-semibold text-foreground">{lead.businessName}</h1>
@@ -176,22 +193,22 @@ export default function LeadDetailPage() {
         ))}
       </div>
 
-      {activeTab === "info" && <InfoTab lead={lead} />}
+      {activeTab === "info" && <InfoTab lead={detail} />}
       {activeTab === "contacts" && (
         <ContactsTab
-          lead={lead}
+          lead={detail}
           showForm={showContactForm}
           setShowForm={setShowContactForm}
           onSaved={invalidate}
         />
       )}
       {activeTab === "drafts" && (
-        <DraftsTab lead={lead} showForm={showDraftForm} setShowForm={setShowDraftForm} onSaved={invalidate} />
+        <DraftsTab lead={detail} showForm={showDraftForm} setShowForm={setShowDraftForm} onSaved={invalidate} />
       )}
-      {activeTab === "events" && <EventsTab lead={lead} />}
-      {activeTab === "replies" && <RepliesTab lead={lead} />}
+      {activeTab === "events" && <EventsTab lead={detail} />}
+      {activeTab === "replies" && <RepliesTab lead={detail} />}
       {activeTab === "tasks" && (
-        <TasksTab lead={lead} showForm={showTaskForm} setShowForm={setShowTaskForm} onSaved={invalidate} />
+        <TasksTab lead={detail} showForm={showTaskForm} setShowForm={setShowTaskForm} onSaved={invalidate} />
       )}
 
       {showEdit && (
@@ -205,7 +222,7 @@ export default function LeadDetailPage() {
   );
 }
 
-function InfoTab({ lead }: { lead: any }) {
+function InfoTab({ lead }: { lead: LeadDetail }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div className="bg-card border border-card-border rounded-xl p-5 space-y-3">
@@ -220,10 +237,10 @@ function InfoTab({ lead }: { lead: any }) {
       </div>
       <div className="bg-card border border-card-border rounded-xl p-5 space-y-3">
         <h3 className="text-sm font-semibold text-foreground">Estado CRM</h3>
-        <Field label="Estado" value={CRM_STATUS_LABELS[lead.crmStatus] ?? lead.crmStatus} />
-        <Field label="Consentimiento" value={CONSENT_STATUS_LABELS[lead.consentStatus] ?? lead.consentStatus} />
-        <Field label="Prioridad" value={PRIORITY_LABELS[lead.priority] ?? lead.priority} />
-        <Field label="Asignado a" value={lead.assignedTo} />
+        <Field label="Estado" value={CRM_STATUS_LABELS[lead.crmStatus ?? ""] ?? lead.crmStatus ?? ""} />
+        <Field label="Consentimiento" value={CONSENT_STATUS_LABELS[lead.consentStatus ?? ""] ?? lead.consentStatus ?? ""} />
+        <Field label="Prioridad" value={PRIORITY_LABELS[lead.priority ?? ""] ?? lead.priority ?? ""} />
+        <Field label="Asignado a" value={lead.assignedTo ?? ""} />
         <Field label="Ultimo contacto" value={formatDate(lead.lastContactedAt)} />
         <Field label="Proxima accion" value={formatDate(lead.nextActionAt)} />
         <Field label="Creado" value={formatDate(lead.createdAt)} />
@@ -244,24 +261,37 @@ function InfoTab({ lead }: { lead: any }) {
   );
 }
 
-function Field({ label, value, icon, isLink }: { label: string; value?: any; icon?: React.ReactNode; isLink?: boolean }) {
+function Field({ label, value, icon, isLink }: {
+  label: string;
+  value?: string | number | null;
+  icon?: React.ReactNode;
+  isLink?: boolean;
+}) {
   if (!value) return null;
+  const strValue = String(value);
   return (
     <div className="flex items-start gap-2">
       {icon && <span className="text-muted-foreground mt-0.5 flex-shrink-0">{icon}</span>}
       <div>
         <div className="text-xs text-muted-foreground">{label}</div>
         {isLink ? (
-          <a href={value} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline">{value}</a>
+          <a href={strValue} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline">{strValue}</a>
         ) : (
-          <div className="text-sm text-foreground">{value}</div>
+          <div className="text-sm text-foreground">{strValue}</div>
         )}
       </div>
     </div>
   );
 }
 
-function ContactsTab({ lead, showForm, setShowForm, onSaved }: any) {
+type TabProps = {
+  lead: LeadDetail;
+  showForm: boolean;
+  setShowForm: (v: boolean) => void;
+  onSaved: () => void;
+};
+
+function ContactsTab({ lead, showForm, setShowForm, onSaved }: TabProps) {
   const [form, setForm] = useState({ name: "", role: "", email: "", phone: "" });
   const createMutation = useCreateContact();
   const deleteMutation = useDeleteContact();
@@ -302,11 +332,11 @@ function ContactsTab({ lead, showForm, setShowForm, onSaved }: any) {
           </div>
         </form>
       )}
-      {lead.contacts?.length === 0 ? (
+      {(lead.contacts?.length ?? 0) === 0 ? (
         <p className="text-sm text-muted-foreground">No hay contactos asociados</p>
       ) : (
         <div className="space-y-2">
-          {lead.contacts?.map((c: any) => (
+          {lead.contacts?.map((c: Contact) => (
             <div key={c.id} className="bg-card border border-card-border rounded-lg p-4 flex items-start justify-between">
               <div>
                 <div className="font-medium text-sm text-foreground">{c.name}</div>
@@ -328,7 +358,7 @@ function ContactsTab({ lead, showForm, setShowForm, onSaved }: any) {
   );
 }
 
-function DraftsTab({ lead, showForm, setShowForm, onSaved }: any) {
+function DraftsTab({ lead, showForm, setShowForm, onSaved }: TabProps) {
   const [form, setForm] = useState({ subject: "", body: "" });
   const createMutation = useCreateEmailDraft();
   const updateMutation = useUpdateEmailDraft();
@@ -369,16 +399,16 @@ function DraftsTab({ lead, showForm, setShowForm, onSaved }: any) {
           </div>
         </form>
       )}
-      {lead.emailDrafts?.length === 0 ? (
+      {(lead.emailDrafts?.length ?? 0) === 0 ? (
         <p className="text-sm text-muted-foreground">No hay borradores</p>
       ) : (
         <div className="space-y-3">
-          {lead.emailDrafts?.map((d: any) => (
+          {lead.emailDrafts?.map((d: EmailDraft) => (
             <div key={d.id} className="bg-card border border-card-border rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="font-medium text-sm text-foreground">{d.subject}</div>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${EMAIL_DRAFT_STATUS_COLORS[d.status] ?? "bg-muted"}`}>
-                  {EMAIL_DRAFT_STATUS_LABELS[d.status] ?? d.status}
+                <span className={`text-xs px-2 py-0.5 rounded-full ${EMAIL_DRAFT_STATUS_COLORS[d.status ?? ""] ?? "bg-muted"}`}>
+                  {EMAIL_DRAFT_STATUS_LABELS[d.status ?? ""] ?? d.status}
                 </span>
               </div>
               <p className="text-sm text-muted-foreground whitespace-pre-wrap line-clamp-3">{d.body}</p>
@@ -401,15 +431,15 @@ function DraftsTab({ lead, showForm, setShowForm, onSaved }: any) {
   );
 }
 
-function EventsTab({ lead }: any) {
+function EventsTab({ lead }: { lead: LeadDetail }) {
   return (
     <div className="space-y-3">
       <h3 className="text-sm font-semibold text-foreground">Eventos de contacto</h3>
-      {lead.outreachEvents?.length === 0 ? (
+      {(lead.outreachEvents?.length ?? 0) === 0 ? (
         <p className="text-sm text-muted-foreground">No hay eventos registrados</p>
       ) : (
         <div className="space-y-2">
-          {lead.outreachEvents?.map((ev: any) => (
+          {lead.outreachEvents?.map((ev: OutreachEvent) => (
             <div key={ev.id} className="bg-card border border-card-border rounded-lg p-4">
               <div className="flex items-center gap-3 mb-1">
                 <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{ev.channel}</span>
@@ -426,15 +456,15 @@ function EventsTab({ lead }: any) {
   );
 }
 
-function RepliesTab({ lead }: any) {
+function RepliesTab({ lead }: { lead: LeadDetail }) {
   return (
     <div className="space-y-3">
       <h3 className="text-sm font-semibold text-foreground">Respuestas recibidas</h3>
-      {lead.replies?.length === 0 ? (
+      {(lead.replies?.length ?? 0) === 0 ? (
         <p className="text-sm text-muted-foreground">No hay respuestas registradas</p>
       ) : (
         <div className="space-y-2">
-          {lead.replies?.map((r: any) => (
+          {lead.replies?.map((r: Reply) => (
             <div key={r.id} className="bg-card border border-card-border rounded-lg p-4">
               <div className="flex items-center gap-3 mb-1">
                 {r.intent && <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{r.intent}</span>}
@@ -451,7 +481,7 @@ function RepliesTab({ lead }: any) {
   );
 }
 
-function TasksTab({ lead, showForm, setShowForm, onSaved }: any) {
+function TasksTab({ lead, showForm, setShowForm, onSaved }: TabProps) {
   const [form, setForm] = useState({ title: "", taskType: "otro", dueDate: "", description: "" });
   const createMutation = useCreateTask();
   const updateMutation = useUpdateTask();
@@ -466,7 +496,7 @@ function TasksTab({ lead, showForm, setShowForm, onSaved }: any) {
     onSaved();
   };
 
-  const toggleStatus = async (taskId: number, status: string) => {
+  const toggleStatus = async (taskId: number, status: string | null | undefined) => {
     const newStatus = status === "completada" ? "pendiente" : "completada";
     await updateMutation.mutateAsync({ id: taskId, data: { status: newStatus } });
     onSaved();
@@ -506,11 +536,11 @@ function TasksTab({ lead, showForm, setShowForm, onSaved }: any) {
           </div>
         </form>
       )}
-      {lead.tasks?.length === 0 ? (
+      {(lead.tasks?.length ?? 0) === 0 ? (
         <p className="text-sm text-muted-foreground">No hay tareas pendientes</p>
       ) : (
         <div className="space-y-2">
-          {lead.tasks?.map((t: any) => (
+          {lead.tasks?.map((t: Task) => (
             <div key={t.id} className={`bg-card border border-card-border rounded-lg p-4 flex items-start gap-3 ${t.status === "completada" ? "opacity-60" : ""}`}>
               <button onClick={() => toggleStatus(t.id, t.status)} className={`w-4 h-4 mt-0.5 rounded border flex-shrink-0 flex items-center justify-center ${t.status === "completada" ? "bg-primary border-primary" : "border-input"}`}>
                 {t.status === "completada" && <Check className="w-2.5 h-2.5 text-primary-foreground" />}

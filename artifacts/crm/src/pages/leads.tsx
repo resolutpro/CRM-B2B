@@ -13,6 +13,9 @@ import { Search, Plus, ChevronLeft, ChevronRight, Trash2, Eye, Ban, Check } from
 import { useToast } from "@/hooks/use-toast";
 import { LeadFormDialog } from "@/components/lead-form-dialog";
 
+type SuppressionErrorData = { error?: string; detail?: string };
+type ApiErrorLike = { status?: number; data?: SuppressionErrorData };
+
 export default function LeadsPage() {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("");
@@ -56,9 +59,22 @@ export default function LeadsPage() {
   };
 
   const handleApprove = async (id: number) => {
-    await approveMutation.mutateAsync({ id, data: { crmStatus: "aprobado_para_contactar" } });
-    toast({ title: "Lead aprobado para contactar" });
-    invalidate();
+    try {
+      await approveMutation.mutateAsync({ id, data: { crmStatus: "aprobado_para_contactar" } });
+      toast({ title: "Lead aprobado para contactar" });
+      invalidate();
+    } catch (err) {
+      const apiErr = err as ApiErrorLike;
+      if (apiErr?.status === 422) {
+        toast({
+          title: "Lead bloqueado por supresión",
+          description: apiErr.data?.detail ?? "Este email o dominio está en la lista de supresión.",
+          variant: "destructive",
+        });
+      } else {
+        toast({ title: "Error al aprobar lead", variant: "destructive" });
+      }
+    }
   };
 
   const leads = data?.data ?? [];
@@ -152,8 +168,11 @@ export default function LeadsPage() {
               {leads.map(lead => (
                 <tr key={lead.id} data-testid={`row-lead-${lead.id}`} className="hover:bg-muted/20 transition-colors">
                   <td className="px-4 py-3">
-                    <Link href={`/leads/${lead.id}`}>
-                      <a className="font-medium text-foreground hover:text-primary transition-colors">{lead.businessName}</a>
+                    <Link
+                      href={`/leads/${lead.id}`}
+                      className="font-medium text-foreground hover:text-primary transition-colors"
+                    >
+                      {lead.businessName}
                     </Link>
                     {lead.email && <div className="text-xs text-muted-foreground mt-0.5">{lead.email}</div>}
                   </td>
@@ -177,10 +196,12 @@ export default function LeadsPage() {
                   <td className="px-4 py-3 text-muted-foreground text-xs">{formatDate(lead.createdAt)}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
-                      <Link href={`/leads/${lead.id}`}>
-                        <a data-testid={`button-view-${lead.id}`} className="p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
-                          <Eye className="w-3.5 h-3.5" />
-                        </a>
+                      <Link
+                        href={`/leads/${lead.id}`}
+                        data-testid={`button-view-${lead.id}`}
+                        className="p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
                       </Link>
                       <button
                         data-testid={`button-approve-${lead.id}`}

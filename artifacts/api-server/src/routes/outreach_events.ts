@@ -38,7 +38,18 @@ router.patch("/outreach-events/:id", requireAuth, async (req, res) => {
       .set(req.body)
       .where(eq(outreachEventsTable.id, id))
       .returning();
+    if (!updated) { res.status(404).json({ error: "Evento no encontrado" }); return; }
     res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: "Error interno" });
+  }
+});
+
+router.delete("/outreach-events/:id", requireAuth, async (req, res) => {
+  try {
+    const id = parseInt(String(req.params["id"]));
+    await db.delete(outreachEventsTable).where(eq(outreachEventsTable.id, id));
+    res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: "Error interno" });
   }

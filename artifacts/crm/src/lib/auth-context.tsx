@@ -27,7 +27,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
-    await logoutMutation.mutateAsync({});
+    await logoutMutation.mutateAsync();
     queryClient.clear();
     setLocation("/login");
   };

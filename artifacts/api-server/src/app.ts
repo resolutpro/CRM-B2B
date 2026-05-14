@@ -35,7 +35,13 @@ const PgSession = connectPgSimple(session);
 app.use(
   session({
     store: new PgSession({ pool }),
-    secret: process.env.SESSION_SECRET || "labercianita-crm-secret-2024",
+    secret: (() => {
+      const s = process.env.SESSION_SECRET;
+      if (!s && process.env.NODE_ENV === "production") {
+        throw new Error("SESSION_SECRET environment variable is required in production");
+      }
+      return s ?? "labercianita-crm-dev-secret-do-not-use-in-prod";
+    })(),
     resave: false,
     saveUninitialized: false,
     cookie: {

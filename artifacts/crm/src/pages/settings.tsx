@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useGetSettings, useUpdateSettings, getGetSettingsQueryKey } from "@workspace/api-client-react";
+import type { Setting } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
@@ -26,8 +27,8 @@ export default function SettingsPage() {
   useEffect(() => {
     if (settings) {
       const map: Record<string, string> = {};
-      for (const s of settings) {
-        map[(s as any).key] = (s as any).value ?? "";
+      for (const s of settings as Setting[]) {
+        map[s.key] = s.value ?? "";
       }
       setForm(map);
     }
