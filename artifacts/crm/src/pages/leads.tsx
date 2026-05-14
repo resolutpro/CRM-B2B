@@ -9,7 +9,7 @@ import {
   CRM_STATUS_LABELS, CRM_STATUS_COLORS, PRIORITY_COLORS, PRIORITY_LABELS,
   ALL_CRM_STATUSES, scoreColor, formatDate
 } from "@/lib/utils";
-import { Search, Plus, ChevronLeft, ChevronRight, Trash2, Eye, Ban, Check } from "lucide-react";
+import { Search, Plus, ChevronLeft, ChevronRight, Trash2, Eye, Ban, Check, ArrowUpDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { LeadFormDialog } from "@/components/lead-form-dialog";
 
@@ -21,6 +21,8 @@ export default function LeadsPage() {
   const [status, setStatus] = useState("");
   const [priority, setPriority] = useState("");
   const [minScore, setMinScore] = useState("");
+  const [sortBy, setSortBy] = useState("createdAt");
+  const [sortDir, setSortDir] = useState("desc");
   const [page, setPage] = useState(1);
   const [showCreate, setShowCreate] = useState(false);
   const qc = useQueryClient();
@@ -31,6 +33,8 @@ export default function LeadsPage() {
     status: status || undefined,
     priority: priority || undefined,
     minScore: minScore ? parseInt(minScore) : undefined,
+    sortBy,
+    sortDir,
     page,
     limit: 25,
   };
@@ -77,9 +81,29 @@ export default function LeadsPage() {
     }
   };
 
+  const toggleSort = (field: string) => {
+    if (sortBy === field) {
+      setSortDir(d => d === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(field);
+      setSortDir("desc");
+    }
+    setPage(1);
+  };
+
   const leads = data?.data ?? [];
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / 25);
+
+  const SortButton = ({ field, label }: { field: string; label: string }) => (
+    <button
+      onClick={() => toggleSort(field)}
+      className={`flex items-center gap-1 text-left font-medium text-muted-foreground hover:text-foreground ${sortBy === field ? "text-foreground" : ""}`}
+    >
+      {label}
+      <ArrowUpDown className={`w-3 h-3 flex-shrink-0 ${sortBy === field ? "opacity-100" : "opacity-30"}`} />
+    </button>
+  );
 
   return (
     <div className="p-6 space-y-5">
@@ -138,6 +162,24 @@ export default function LeadsPage() {
           className="w-28 px-3 py-2 border border-input bg-background rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           min={0} max={100}
         />
+        <select
+          data-testid="select-sort"
+          value={`${sortBy}:${sortDir}`}
+          onChange={e => {
+            const [field, dir] = e.target.value.split(":");
+            setSortBy(field);
+            setSortDir(dir);
+            setPage(1);
+          }}
+          className="px-3 py-2 border border-input bg-background rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <option value="createdAt:desc">Más recientes</option>
+          <option value="createdAt:asc">Más antiguos</option>
+          <option value="fitScore:desc">Score (mayor)</option>
+          <option value="fitScore:asc">Score (menor)</option>
+          <option value="crmStatus:asc">Estado (A-Z)</option>
+          <option value="crmStatus:desc">Estado (Z-A)</option>
+        </select>
       </div>
 
       <div className="bg-card border border-card-border rounded-xl overflow-hidden">
@@ -154,13 +196,13 @@ export default function LeadsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/30">
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Empresa</th>
+                <th className="text-left px-4 py-3"><SortButton field="businessName" label="Empresa" /></th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Tipo</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Ciudad</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Score</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Estado</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Prioridad</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Creado</th>
+                <th className="text-left px-4 py-3"><SortButton field="fitScore" label="Score" /></th>
+                <th className="text-left px-4 py-3"><SortButton field="crmStatus" label="Estado" /></th>
+                <th className="text-left px-4 py-3"><SortButton field="priority" label="Prioridad" /></th>
+                <th className="text-left px-4 py-3"><SortButton field="createdAt" label="Creado" /></th>
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>

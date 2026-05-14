@@ -1,4 +1,5 @@
 import { useGetDashboardStats, getGetDashboardStatsQueryKey } from "@workspace/api-client-react";
+import type { OutreachEvent } from "@workspace/api-client-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { CRM_STATUS_LABELS, CRM_STATUS_COLORS, formatDate } from "@/lib/utils";
 import { Users, Mail, CheckSquare, TrendingUp } from "lucide-react";
@@ -78,7 +79,7 @@ export default function DashboardPage() {
           <div className="px-6 py-8 text-center text-sm text-muted-foreground">No hay eventos registrados aun</div>
         ) : (
           <div className="divide-y divide-border">
-            {(stats?.recentEvents ?? []).slice(0, 8).map((event: any) => (
+            {(stats?.recentEvents ?? []).slice(0, 8).map((event: OutreachEvent) => (
               <div key={event.id} className="px-6 py-3 flex items-center gap-4">
                 <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{event.channel}</span>
                 <span className="text-sm text-foreground flex-1 truncate">{event.subject || "(sin asunto)"}</span>
@@ -108,7 +109,12 @@ export default function DashboardPage() {
   );
 }
 
-function StatCard({ label, value, icon, accent = false }: { label: string; value: any; icon: React.ReactNode; accent?: boolean }) {
+function StatCard({ label, value, icon, accent = false }: {
+  label: string;
+  value: string | number;
+  icon: React.ReactNode;
+  accent?: boolean;
+}) {
   return (
     <div className={`bg-card border border-card-border rounded-xl p-5 ${accent ? "border-primary/30 bg-primary/5" : ""}`}>
       <div className="flex items-center justify-between mb-3">

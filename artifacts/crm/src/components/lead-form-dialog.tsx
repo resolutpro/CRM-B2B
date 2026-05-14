@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useCreateLead, useUpdateLead, getGetLeadsQueryKey } from "@workspace/api-client-react";
+import type { Lead } from "@workspace/api-client-react";
+import { useCreateLead, useUpdateLead } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { ALL_CRM_STATUSES, CRM_STATUS_LABELS } from "@/lib/utils";
@@ -8,11 +9,12 @@ import { useToast } from "@/hooks/use-toast";
 interface Props {
   onClose: () => void;
   onSaved: () => void;
-  initial?: any;
+  initial?: Partial<Lead>;
 }
 
 export function LeadFormDialog({ onClose, onSaved, initial }: Props) {
   const { toast } = useToast();
+  const qc = useQueryClient();
   const createMutation = useCreateLead();
   const updateMutation = useUpdateLead();
 
@@ -52,6 +54,7 @@ export function LeadFormDialog({ onClose, onSaved, initial }: Props) {
         await createMutation.mutateAsync({ data: payload });
         toast({ title: "Lead creado" });
       }
+      qc.invalidateQueries({ queryKey: ["getLeads"] });
       onSaved();
     } catch {
       toast({ title: "Error al guardar", variant: "destructive" });
@@ -76,7 +79,7 @@ export function LeadFormDialog({ onClose, onSaved, initial }: Props) {
             <X className="w-4 h-4" />
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-4 flex-1">
+        <form id="lead-form" onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-4 flex-1">
           <div className="grid grid-cols-2 gap-4">
             <Field label="Nombre empresa *">
               <input data-testid="input-businessName" className={inputCls} value={form.businessName} onChange={set("businessName")} required />
@@ -146,7 +149,8 @@ export function LeadFormDialog({ onClose, onSaved, initial }: Props) {
           <button onClick={onClose} className="px-4 py-2 text-sm rounded-lg border border-input hover:bg-muted">Cancelar</button>
           <button
             data-testid="button-save-lead"
-            onClick={(e) => { e.preventDefault(); handleSubmit(e as any); }}
+            type="submit"
+            form="lead-form"
             disabled={createMutation.isPending || updateMutation.isPending}
             className="px-4 py-2 text-sm rounded-lg bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50"
           >

@@ -147,6 +147,25 @@ router.patch("/agent/leads/:id", async (req, res) => {
       res.status(400).json({ error: "No se puede actualizar un lead en estado protegido" });
       return;
     }
+    if (req.body.crmStatus === "aprobado_para_contactar" && existing.email) {
+      const email = existing.email.toLowerCase();
+      const domain = email.split("@")[1] ?? "";
+      const suppressed = await db
+        .select()
+        .from(suppressionListTable)
+        .where(or(eq(suppressionListTable.email, email), eq(suppressionListTable.domain, domain)))
+        .limit(1);
+      if (suppressed.length > 0) {
+        const entry = suppressed[0]!;
+        const reason = entry.reason ?? "sin motivo especificado";
+        res.status(422).json({
+          error: "Lead bloqueado por lista de supresión",
+          detail: `El email "${existing.email}" o su dominio "${domain}" está en la lista de supresión. Motivo: ${reason}`,
+          suppressionId: entry.id,
+        });
+        return;
+      }
+    }
     const body = { ...req.body, updatedAt: new Date() };
     if (body.lastContactedAt) body.lastContactedAt = new Date(body.lastContactedAt);
     if (body.nextActionAt) body.nextActionAt = new Date(body.nextActionAt);

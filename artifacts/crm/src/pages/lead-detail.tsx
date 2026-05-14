@@ -3,8 +3,11 @@ import { useRoute, Link } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useGetLead, useUpdateLead, useDeleteLead, useSuppressLead,
-  useCreateTask, useUpdateTask, useCreateEmailDraft, useUpdateEmailDraft,
-  useCreateContact, useDeleteContact,
+  useCreateTask, useUpdateTask,
+  useCreateEmailDraft, useUpdateEmailDraft,
+  useCreateContact, useUpdateContact, useDeleteContact,
+  useCreateOutreachEvent,
+  useCreateReply,
   getGetLeadQueryKey
 } from "@workspace/api-client-react";
 import type { LeadDetail, Contact, EmailDraft, OutreachEvent, Reply, Task } from "@workspace/api-client-react";
@@ -32,6 +35,8 @@ export default function LeadDetailPage() {
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [showDraftForm, setShowDraftForm] = useState(false);
   const [showContactForm, setShowContactForm] = useState(false);
+  const [showEventForm, setShowEventForm] = useState(false);
+  const [showReplyForm, setShowReplyForm] = useState(false);
 
   const { data: lead, isLoading } = useGetLead(id, {
     query: { enabled: !!id, queryKey: getGetLeadQueryKey(id) }
@@ -176,13 +181,13 @@ export default function LeadDetailPage() {
         </button>
       </div>
 
-      <div className="flex gap-1 border-b border-border">
+      <div className="flex gap-1 border-b border-border overflow-x-auto">
         {tabs.map(t => (
           <button
             key={t.id}
             data-testid={`tab-${t.id}`}
             onClick={() => setActiveTab(t.id)}
-            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
+            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap ${
               activeTab === t.id
                 ? "border-primary text-primary"
                 : "border-transparent text-muted-foreground hover:text-foreground"
@@ -195,18 +200,17 @@ export default function LeadDetailPage() {
 
       {activeTab === "info" && <InfoTab lead={detail} />}
       {activeTab === "contacts" && (
-        <ContactsTab
-          lead={detail}
-          showForm={showContactForm}
-          setShowForm={setShowContactForm}
-          onSaved={invalidate}
-        />
+        <ContactsTab lead={detail} showForm={showContactForm} setShowForm={setShowContactForm} onSaved={invalidate} />
       )}
       {activeTab === "drafts" && (
         <DraftsTab lead={detail} showForm={showDraftForm} setShowForm={setShowDraftForm} onSaved={invalidate} />
       )}
-      {activeTab === "events" && <EventsTab lead={detail} />}
-      {activeTab === "replies" && <RepliesTab lead={detail} />}
+      {activeTab === "events" && (
+        <EventsTab lead={detail} showForm={showEventForm} setShowForm={setShowEventForm} onSaved={invalidate} />
+      )}
+      {activeTab === "replies" && (
+        <RepliesTab lead={detail} showForm={showReplyForm} setShowForm={setShowReplyForm} onSaved={invalidate} />
+      )}
       {activeTab === "tasks" && (
         <TasksTab lead={detail} showForm={showTaskForm} setShowForm={setShowTaskForm} onSaved={invalidate} />
       )}
@@ -293,9 +297,14 @@ type TabProps = {
 
 function ContactsTab({ lead, showForm, setShowForm, onSaved }: TabProps) {
   const [form, setForm] = useState({ name: "", role: "", email: "", phone: "" });
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState({ name: "", role: "", email: "", phone: "" });
   const createMutation = useCreateContact();
+  const updateMutation = useUpdateContact();
   const deleteMutation = useDeleteContact();
   const { toast } = useToast();
+
+  const inputCls = "px-2.5 py-1 border border-input bg-background rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-ring";
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -303,6 +312,19 @@ function ContactsTab({ lead, showForm, setShowForm, onSaved }: TabProps) {
     toast({ title: "Contacto creado" });
     setForm({ name: "", role: "", email: "", phone: "" });
     setShowForm(false);
+    onSaved();
+  };
+
+  const startEdit = (c: Contact) => {
+    setEditingId(c.id);
+    setEditForm({ name: c.name, role: c.role ?? "", email: c.email ?? "", phone: c.phone ?? "" });
+  };
+
+  const handleEdit = async (e: React.FormEvent, contactId: number) => {
+    e.preventDefault();
+    await updateMutation.mutateAsync({ id: contactId, data: editForm });
+    toast({ title: "Contacto actualizado" });
+    setEditingId(null);
     onSaved();
   };
 
@@ -318,13 +340,13 @@ function ContactsTab({ lead, showForm, setShowForm, onSaved }: TabProps) {
         <form onSubmit={handleCreate} className="bg-muted/30 rounded-xl p-4 space-y-3 border border-border">
           <div className="grid grid-cols-2 gap-3">
             <input required placeholder="Nombre *" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-              className="px-3 py-1.5 border border-input bg-background rounded-lg text-sm" />
+              className={inputCls} />
             <input placeholder="Cargo" value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
-              className="px-3 py-1.5 border border-input bg-background rounded-lg text-sm" />
+              className={inputCls} />
             <input placeholder="Email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-              className="px-3 py-1.5 border border-input bg-background rounded-lg text-sm" />
+              className={inputCls} />
             <input placeholder="Telefono" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
-              className="px-3 py-1.5 border border-input bg-background rounded-lg text-sm" />
+              className={inputCls} />
           </div>
           <div className="flex gap-2">
             <button type="submit" className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-lg">Guardar</button>
@@ -337,19 +359,39 @@ function ContactsTab({ lead, showForm, setShowForm, onSaved }: TabProps) {
       ) : (
         <div className="space-y-2">
           {lead.contacts?.map((c: Contact) => (
-            <div key={c.id} className="bg-card border border-card-border rounded-lg p-4 flex items-start justify-between">
-              <div>
-                <div className="font-medium text-sm text-foreground">{c.name}</div>
-                {c.role && <div className="text-xs text-muted-foreground">{c.role}</div>}
-                <div className="flex gap-3 mt-1">
-                  {c.email && <a href={`mailto:${c.email}`} className="text-xs text-primary hover:underline">{c.email}</a>}
-                  {c.phone && <span className="text-xs text-muted-foreground">{c.phone}</span>}
+            <div key={c.id} className="bg-card border border-card-border rounded-lg p-4">
+              {editingId === c.id ? (
+                <form onSubmit={e => handleEdit(e, c.id)} className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <input required placeholder="Nombre *" value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} className={inputCls} />
+                    <input placeholder="Cargo" value={editForm.role} onChange={e => setEditForm(f => ({ ...f, role: e.target.value }))} className={inputCls} />
+                    <input placeholder="Email" value={editForm.email} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} className={inputCls} />
+                    <input placeholder="Telefono" value={editForm.phone} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} className={inputCls} />
+                  </div>
+                  <div className="flex gap-2">
+                    <button type="submit" className="px-2.5 py-1 text-xs bg-primary text-primary-foreground rounded-lg">Guardar</button>
+                    <button type="button" onClick={() => setEditingId(null)} className="px-2.5 py-1 text-xs border border-input rounded-lg">Cancelar</button>
+                  </div>
+                </form>
+              ) : (
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="font-medium text-sm text-foreground">{c.name}</div>
+                    {c.role && <div className="text-xs text-muted-foreground">{c.role}</div>}
+                    <div className="flex gap-3 mt-1">
+                      {c.email && <a href={`mailto:${c.email}`} className="text-xs text-primary hover:underline">{c.email}</a>}
+                      {c.phone && <span className="text-xs text-muted-foreground">{c.phone}</span>}
+                    </div>
+                  </div>
+                  <div className="flex gap-1">
+                    <button onClick={() => startEdit(c)} className="p-1 rounded hover:bg-muted text-muted-foreground text-xs px-2">Editar</button>
+                    <button onClick={async () => { await deleteMutation.mutateAsync({ id: c.id }); onSaved(); }}
+                      className="p-1 rounded hover:bg-muted text-muted-foreground">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
-              </div>
-              <button onClick={async () => { await deleteMutation.mutateAsync({ id: c.id }); onSaved(); }}
-                className="p-1 rounded hover:bg-muted text-muted-foreground">
-                <X className="w-3.5 h-3.5" />
-              </button>
+              )}
             </div>
           ))}
         </div>
@@ -431,10 +473,56 @@ function DraftsTab({ lead, showForm, setShowForm, onSaved }: TabProps) {
   );
 }
 
-function EventsTab({ lead }: { lead: LeadDetail }) {
+function EventsTab({ lead, showForm, setShowForm, onSaved }: TabProps) {
+  const [form, setForm] = useState({ channel: "email", direction: "outbound", subject: "", body: "" });
+  const createMutation = useCreateOutreachEvent();
+  const { toast } = useToast();
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await createMutation.mutateAsync({ data: { leadId: lead.id, ...form } });
+    toast({ title: "Evento registrado" });
+    setForm({ channel: "email", direction: "outbound", subject: "", body: "" });
+    setShowForm(false);
+    onSaved();
+  };
+
   return (
-    <div className="space-y-3">
-      <h3 className="text-sm font-semibold text-foreground">Eventos de contacto</h3>
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h3 className="text-sm font-semibold text-foreground">Eventos de contacto</h3>
+        <button onClick={() => setShowForm(true)} className="flex items-center gap-1.5 text-sm text-primary hover:underline">
+          <Plus className="w-3.5 h-3.5" /> Registrar evento
+        </button>
+      </div>
+      {showForm && (
+        <form onSubmit={handleCreate} className="bg-muted/30 rounded-xl p-4 space-y-3 border border-border">
+          <div className="grid grid-cols-2 gap-3">
+            <select value={form.channel} onChange={e => setForm(f => ({ ...f, channel: e.target.value }))}
+              className="px-3 py-1.5 border border-input bg-background rounded-lg text-sm">
+              <option value="email">Email</option>
+              <option value="telefono">Teléfono</option>
+              <option value="whatsapp">WhatsApp</option>
+              <option value="instagram">Instagram</option>
+              <option value="linkedin">LinkedIn</option>
+              <option value="otro">Otro</option>
+            </select>
+            <select value={form.direction} onChange={e => setForm(f => ({ ...f, direction: e.target.value }))}
+              className="px-3 py-1.5 border border-input bg-background rounded-lg text-sm">
+              <option value="outbound">Saliente</option>
+              <option value="inbound">Entrante</option>
+            </select>
+          </div>
+          <input placeholder="Asunto (opcional)" value={form.subject} onChange={e => setForm(f => ({ ...f, subject: e.target.value }))}
+            className="w-full px-3 py-1.5 border border-input bg-background rounded-lg text-sm" />
+          <textarea placeholder="Notas (opcional)" value={form.body} onChange={e => setForm(f => ({ ...f, body: e.target.value }))}
+            className="w-full px-3 py-1.5 border border-input bg-background rounded-lg text-sm h-20 resize-none" />
+          <div className="flex gap-2">
+            <button type="submit" className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-lg">Guardar</button>
+            <button type="button" onClick={() => setShowForm(false)} className="px-3 py-1.5 text-sm border border-input rounded-lg">Cancelar</button>
+          </div>
+        </form>
+      )}
       {(lead.outreachEvents?.length ?? 0) === 0 ? (
         <p className="text-sm text-muted-foreground">No hay eventos registrados</p>
       ) : (
@@ -456,10 +544,64 @@ function EventsTab({ lead }: { lead: LeadDetail }) {
   );
 }
 
-function RepliesTab({ lead }: { lead: LeadDetail }) {
+function RepliesTab({ lead, showForm, setShowForm, onSaved }: TabProps) {
+  const [form, setForm] = useState({ fromEmail: "", body: "", intent: "", sentiment: "" });
+  const createMutation = useCreateReply();
+  const { toast } = useToast();
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await createMutation.mutateAsync({ data: {
+      leadId: lead.id,
+      body: form.body,
+      fromEmail: form.fromEmail || undefined,
+      intent: form.intent || undefined,
+      sentiment: form.sentiment || undefined,
+    } });
+    toast({ title: "Respuesta registrada" });
+    setForm({ fromEmail: "", body: "", intent: "", sentiment: "" });
+    setShowForm(false);
+    onSaved();
+  };
+
   return (
-    <div className="space-y-3">
-      <h3 className="text-sm font-semibold text-foreground">Respuestas recibidas</h3>
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h3 className="text-sm font-semibold text-foreground">Respuestas recibidas</h3>
+        <button onClick={() => setShowForm(true)} className="flex items-center gap-1.5 text-sm text-primary hover:underline">
+          <Plus className="w-3.5 h-3.5" /> Registrar respuesta
+        </button>
+      </div>
+      {showForm && (
+        <form onSubmit={handleCreate} className="bg-muted/30 rounded-xl p-4 space-y-3 border border-border">
+          <div className="grid grid-cols-2 gap-3">
+            <input placeholder="Email remitente (opcional)" value={form.fromEmail} onChange={e => setForm(f => ({ ...f, fromEmail: e.target.value }))}
+              className="px-3 py-1.5 border border-input bg-background rounded-lg text-sm" />
+            <select value={form.intent} onChange={e => setForm(f => ({ ...f, intent: e.target.value }))}
+              className="px-3 py-1.5 border border-input bg-background rounded-lg text-sm">
+              <option value="">Intención (opcional)</option>
+              <option value="interesado">Interesado</option>
+              <option value="no_interesado">No interesado</option>
+              <option value="solicita_info">Solicita información</option>
+              <option value="baja">Solicita baja</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
+          <select value={form.sentiment} onChange={e => setForm(f => ({ ...f, sentiment: e.target.value }))}
+            className="w-full px-3 py-1.5 border border-input bg-background rounded-lg text-sm">
+            <option value="">Sentimiento (opcional)</option>
+            <option value="positivo">Positivo</option>
+            <option value="neutro">Neutro</option>
+            <option value="negativo">Negativo</option>
+          </select>
+          <textarea required placeholder="Contenido de la respuesta *" value={form.body} onChange={e => setForm(f => ({ ...f, body: e.target.value }))}
+            className="w-full px-3 py-1.5 border border-input bg-background rounded-lg text-sm h-24 resize-none" />
+          <div className="flex gap-2">
+            <button type="submit" className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-lg">Guardar</button>
+            <button type="button" onClick={() => setShowForm(false)} className="px-3 py-1.5 text-sm border border-input rounded-lg">Cancelar</button>
+          </div>
+        </form>
+      )}
       {(lead.replies?.length ?? 0) === 0 ? (
         <p className="text-sm text-muted-foreground">No hay respuestas registradas</p>
       ) : (
