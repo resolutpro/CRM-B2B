@@ -23,8 +23,20 @@ app.use(
   }),
 );
 
+const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",").map(o => o.trim())
+  : null;
+
 app.use(cors({
-  origin: true,
+  origin: (origin, callback) => {
+    if (!origin) { callback(null, true); return; }
+    if (process.env.NODE_ENV !== "production") { callback(null, true); return; }
+    if (ALLOWED_ORIGINS && ALLOWED_ORIGINS.some(o => origin === o || origin.endsWith(o))) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS: origin not allowed — ${origin}`));
+    }
+  },
   credentials: true,
 }));
 app.use(express.json());

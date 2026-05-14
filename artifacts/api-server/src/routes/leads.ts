@@ -38,6 +38,8 @@ router.get("/leads", requireAuth, async (req, res) => {
     let orderBy: ReturnType<typeof desc>;
     if (sortBy === "fitScore") orderBy = dir(leadsTable.fitScore);
     else if (sortBy === "crmStatus") orderBy = dir(leadsTable.crmStatus);
+    else if (sortBy === "businessName") orderBy = dir(leadsTable.businessName);
+    else if (sortBy === "priority") orderBy = dir(leadsTable.priority);
     else orderBy = dir(leadsTable.createdAt);
 
     const [data, totalResult] = await Promise.all([
