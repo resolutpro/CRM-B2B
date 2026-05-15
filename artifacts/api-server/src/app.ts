@@ -8,6 +8,7 @@ import router from "./routes/index.js";
 import { logger } from "./lib/logger.js";
 
 const app: Express = express();
+app.set("trust proxy", 1);
 
 app.use(
   pinoHttp({
@@ -24,21 +25,32 @@ app.use(
 );
 
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(",").map(o => o.trim())
+  ? process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim())
   : null;
 
-app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin) { callback(null, true); return; }
-    if (process.env.NODE_ENV !== "production") { callback(null, true); return; }
-    if (ALLOWED_ORIGINS && ALLOWED_ORIGINS.some(o => origin === o || origin.endsWith(o))) {
-      callback(null, true);
-    } else {
-      callback(new Error(`CORS: origin not allowed — ${origin}`));
-    }
-  },
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+      if (process.env.NODE_ENV !== "production") {
+        callback(null, true);
+        return;
+      }
+      if (
+        ALLOWED_ORIGINS &&
+        ALLOWED_ORIGINS.some((o) => origin === o || origin.endsWith(o))
+      ) {
+        callback(null, true);
+      } else {
+        callback(new Error(`CORS: origin not allowed — ${origin}`));
+      }
+    },
+    credentials: true,
+  }),
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -50,7 +62,9 @@ app.use(
     secret: (() => {
       const s = process.env.SESSION_SECRET;
       if (!s && process.env.NODE_ENV === "production") {
-        throw new Error("SESSION_SECRET environment variable is required in production");
+        throw new Error(
+          "SESSION_SECRET environment variable is required in production",
+        );
       }
       return s ?? "labercianita-crm-dev-secret-do-not-use-in-prod";
     })(),
