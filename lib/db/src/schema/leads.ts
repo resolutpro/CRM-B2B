@@ -3,8 +3,8 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
 export const crmStatusEnum = [
-  "nuevo", "validado", "pendiente_revision", "email_preparado",
-  "aprobado_para_contactar", "contactado", "respondio_interesado",
+  "nuevo", "validado", "pendiente_revision", "pendiente_generar_borrador",
+  "email_preparado", "aprobado_para_contactar", "contactado", "respondio_interesado",
   "respondio_no_interesado", "seguimiento", "muestra_enviada",
   "negociacion", "cliente_ganado", "cliente_perdido", "no_contactar", "descartado"
 ] as const;
