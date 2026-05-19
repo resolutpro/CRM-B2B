@@ -1,16 +1,18 @@
 import { Router } from "express";
 import { db, emailDraftsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
 
 const router = Router();
 
 router.get("/email-drafts", requireAuth, async (req, res) => {
   try {
-    const { leadId } = req.query;
-    const data = leadId
-      ? await db.select().from(emailDraftsTable).where(eq(emailDraftsTable.leadId, parseInt(String(leadId))))
-      : await db.select().from(emailDraftsTable);
+    const { leadId, status } = req.query;
+    const conditions: ReturnType<typeof eq>[] = [];
+    if (leadId) conditions.push(eq(emailDraftsTable.leadId, parseInt(String(leadId))));
+    if (status) conditions.push(eq(emailDraftsTable.status, String(status)));
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
+    const data = await db.select().from(emailDraftsTable).where(where);
     res.json(data);
   } catch (err) {
     res.status(500).json({ error: "Error interno" });
