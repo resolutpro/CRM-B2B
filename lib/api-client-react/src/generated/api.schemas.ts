@@ -425,3 +425,7 @@ export type AgentGetLeadsParams = {
   business_type?: string;
   limit?: number;
 };
+
+export type AgentGetLeadByEmailParams = {
+  email: string;
+};

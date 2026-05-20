@@ -8,6 +8,7 @@
 
 export * from "./agentConfig";
 export * from "./agentConfigBrand";
+export * from "./agentGetLeadByEmailParams";
 export * from "./agentGetLeadsParams";
 export * from "./agentHealthStatus";
 export * from "./agentRun";

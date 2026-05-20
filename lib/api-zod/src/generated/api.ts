@@ -896,6 +896,38 @@ export const AgentGetLeadsResponseItem = zod.object({
 export const AgentGetLeadsResponse = zod.array(AgentGetLeadsResponseItem);
 
 /**
+ * @summary Get lead by email (agent)
+ */
+export const AgentGetLeadByEmailQueryParams = zod.object({
+  email: zod.coerce.string().email(),
+});
+
+export const AgentGetLeadByEmailResponse = zod.object({
+  id: zod.number(),
+  businessName: zod.string(),
+  businessType: zod.string().nullish(),
+  city: zod.string().nullish(),
+  province: zod.string().nullish(),
+  country: zod.string().nullish(),
+  website: zod.string().nullish(),
+  email: zod.string().nullish(),
+  phone: zod.string().nullish(),
+  instagram: zod.string().nullish(),
+  sourceUrl: zod.string().nullish(),
+  sourceNotes: zod.string().nullish(),
+  fitScore: zod.number().nullish(),
+  fitReason: zod.string().nullish(),
+  consentStatus: zod.string().nullish(),
+  crmStatus: zod.string().nullish(),
+  priority: zod.string().nullish(),
+  assignedTo: zod.string().nullish(),
+  lastContactedAt: zod.string().nullish(),
+  nextActionAt: zod.string().nullish(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+
+/**
  * @summary Get lead by ID (agent)
  */
 export const AgentGetLeadParams = zod.object({

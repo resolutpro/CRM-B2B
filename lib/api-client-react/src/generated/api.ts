@@ -18,6 +18,7 @@ import type {
 
 import type {
   AgentConfig,
+  AgentGetLeadByEmailParams,
   AgentGetLeadsParams,
   AgentHealthStatus,
   AgentRun,
@@ -3460,6 +3461,106 @@ export function useAgentGetLeads<
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getAgentGetLeadsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get lead by email (agent)
+ */
+export const getAgentGetLeadByEmailUrl = (
+  params: AgentGetLeadByEmailParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/agent/leads/by-email?${stringifiedParams}`
+    : `/api/agent/leads/by-email`;
+};
+
+export const agentGetLeadByEmail = async (
+  params: AgentGetLeadByEmailParams,
+  options?: RequestInit,
+): Promise<Lead> => {
+  return customFetch<Lead>(getAgentGetLeadByEmailUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getAgentGetLeadByEmailQueryKey = (
+  params?: AgentGetLeadByEmailParams,
+) => {
+  return [`/api/agent/leads/by-email`, ...(params ? [params] : [])] as const;
+};
+
+export const getAgentGetLeadByEmailQueryOptions = <
+  TData = Awaited<ReturnType<typeof agentGetLeadByEmail>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  params: AgentGetLeadByEmailParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof agentGetLeadByEmail>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getAgentGetLeadByEmailQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof agentGetLeadByEmail>>
+  > = ({ signal }) =>
+    agentGetLeadByEmail(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof agentGetLeadByEmail>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type AgentGetLeadByEmailQueryResult = NonNullable<
+  Awaited<ReturnType<typeof agentGetLeadByEmail>>
+>;
+export type AgentGetLeadByEmailQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get lead by email (agent)
+ */
+
+export function useAgentGetLeadByEmail<
+  TData = Awaited<ReturnType<typeof agentGetLeadByEmail>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  params: AgentGetLeadByEmailParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof agentGetLeadByEmail>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getAgentGetLeadByEmailQueryOptions(params, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

@@ -827,6 +827,32 @@ paths:
                 items:
                   $ref: "#/components/schemas/Lead"
 
+  /agent/leads/by-email:
+    get:
+      operationId: agentGetLeadByEmail
+      tags: [agent]
+      summary: Get lead by email (agent)
+      parameters:
+        - name: email
+          in: query
+          required: true
+          schema:
+            type: string
+            format: email
+      responses:
+        "200":
+          description: Lead found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lead"
+        "404":
+          description: Lead not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    
   /agent/leads/{id}:
     get:
       operationId: agentGetLead
