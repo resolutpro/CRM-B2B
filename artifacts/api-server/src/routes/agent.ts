@@ -167,29 +167,17 @@ router.get("/agent/leads", async (req, res) => {
   }
 });
 
-router.get("/agent/leads/:id", async (req, res) => {
-  try {
-    const id = parseInt(String(req.params["id"]));
-    const [lead] = await db
-      .select()
-      .from(leadsTable)
-      .where(eq(leadsTable.id, id));
-    if (!lead) {
-      res.status(404).json({ error: "Lead no encontrado" });
-      return;
-    }
-    res.json(lead);
-  } catch (err) {
-    res.status(500).json({ error: "Error interno" });
-  }
-});
-
 router.get("/agent/leads/by-email", async (req, res) => {
   try {
     const { email } = req.query;
 
     if (!email || typeof email !== "string") {
-      res.status(400).json({ error: "El parámetro 'email' es obligatorio y debe ser una cadena de texto" });
+      res
+        .status(400)
+        .json({
+          error:
+            "El parámetro 'email' es obligatorio y debe ser una cadena de texto",
+        });
       return;
     }
 
@@ -201,10 +189,29 @@ router.get("/agent/leads/by-email", async (req, res) => {
       .limit(1);
 
     if (!lead) {
-      res.status(404).json({ error: "Lead no encontrado para el email proporcionado" });
+      res
+        .status(404)
+        .json({ error: "Lead no encontrado para el email proporcionado" });
       return;
     }
 
+    res.json(lead);
+  } catch (err) {
+    res.status(500).json({ error: "Error interno" });
+  }
+});
+
+router.get("/agent/leads/:id", async (req, res) => {
+  try {
+    const id = parseInt(String(req.params["id"]));
+    const [lead] = await db
+      .select()
+      .from(leadsTable)
+      .where(eq(leadsTable.id, id));
+    if (!lead) {
+      res.status(404).json({ error: "Lead no encontrado" });
+      return;
+    }
     res.json(lead);
   } catch (err) {
     res.status(500).json({ error: "Error interno" });
