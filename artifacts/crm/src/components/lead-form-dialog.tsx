@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { Lead } from "@workspace/api-client-react";
-import { useCreateLead, useUpdateLead } from "@workspace/api-client-react";
+import { useCreateLead, useUpdateLead, useAgentGetLeadByEmail } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { X } from "lucide-react";
+import { X, AlertTriangle } from "lucide-react";
 import { ALL_CRM_STATUSES, CRM_STATUS_LABELS } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
@@ -36,6 +36,14 @@ export function LeadFormDialog({ onClose, onSaved, initial }: Props) {
     assignedTo: initial?.assignedTo ?? "",
     sourceNotes: initial?.sourceNotes ?? "",
   });
+
+  const trimmedEmail = form.email.trim().toLowerCase();
+  const enableCheck = !initial?.id && trimmedEmail.length > 3 && trimmedEmail.includes("@");
+  const { data: existingByEmail } = useAgentGetLeadByEmail(
+    { email: trimmedEmail },
+    { query: { enabled: enableCheck, retry: false, refetchOnWindowFocus: false } }
+  );
+  const duplicate = enableCheck && existingByEmail ? existingByEmail : null;
 
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setForm(f => ({ ...f, [k]: e.target.value }));
@@ -101,6 +109,15 @@ export function LeadFormDialog({ onClose, onSaved, initial }: Props) {
             </Field>
             <Field label="Email">
               <input className={inputCls} value={form.email} onChange={set("email")} type="email" />
+              {duplicate && (
+                <div className="mt-1.5 flex items-start gap-2 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
+                  <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium">Este email ya existe en la base de datos</p>
+                    <p className="mt-0.5">{duplicate.businessName} — <span className="text-amber-700">{duplicate.crmStatus}</span></p>
+                  </div>
+                </div>
+              )}
             </Field>
             <Field label="Telefono">
               <input className={inputCls} value={form.phone} onChange={set("phone")} />
