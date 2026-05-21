@@ -172,12 +172,10 @@ router.get("/agent/leads/by-email", async (req, res) => {
     const { email } = req.query;
 
     if (!email || typeof email !== "string") {
-      res
-        .status(400)
-        .json({
-          error:
-            "El parámetro 'email' es obligatorio y debe ser una cadena de texto",
-        });
+      res.status(400).json({
+        error:
+          "El parámetro 'email' es obligatorio y debe ser una cadena de texto",
+      });
       return;
     }
 
@@ -263,9 +261,27 @@ router.patch("/agent/leads/:id", async (req, res) => {
       }
     }
     const body = { ...req.body, updatedAt: new Date() };
-    if (body.lastContactedAt)
-      body.lastContactedAt = new Date(body.lastContactedAt);
-    if (body.nextActionAt) body.nextActionAt = new Date(body.nextActionAt);
+    if (req.body.lastContactedAt) {
+      const parsedDate = new Date(req.body.lastContactedAt);
+      if (isNaN(parsedDate.getTime())) {
+        res
+          .status(400)
+          .json({ error: "Formato de fecha inválido en lastContactedAt" });
+        return;
+      }
+      body.lastContactedAt = parsedDate;
+    }
+
+    if (req.body.nextActionAt) {
+      const parsedNext = new Date(req.body.nextActionAt);
+      if (isNaN(parsedNext.getTime())) {
+        res
+          .status(400)
+          .json({ error: "Formato de fecha inválido en nextActionAt" });
+        return;
+      }
+      body.nextActionAt = parsedNext;
+    }
     const [updated] = await db
       .update(leadsTable)
       .set(body)
